@@ -1,0 +1,12 @@
+T Cubed Logo Issues
+-------------------
+
+[ ]Create animation that rotates the shape 9/8 turns and tilts to 0.5.
+
+[ ]Modularize logo into a single .c/.h combo so it can be imported into other
+   projects.
+
+[ ]Include a single function call that will run through the animation and show
+   it on the display.
+
+[ ]Expose an API so the logo can animated and rendered in other contexts.
