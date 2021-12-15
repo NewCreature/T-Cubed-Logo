@@ -20,6 +20,10 @@ typedef struct
 	SHAPE logo_side[3];
 	float angle;
 	float tilt;
+	float v_tilt;   // tilt velocity
+	float vf_tilt;  // tilt velocity friction
+	float v_angle;  // angle velocity
+	float vf_angle; // angle velocity friction
 
 } APP_INSTANCE;
 
@@ -60,11 +64,70 @@ static void render_shape(SHAPE * sp)
 	al_draw_prim(sp->transformed_vertex, NULL, NULL, 0, sp->vertex_count + 1, ALLEGRO_PRIM_TRIANGLE_LIST);
 }
 
+static float get_punch_velocity(float start_angle, float end_angle, float friction)
+{
+	float current_angle = end_angle;
+	float v = 0.0;
+
+	while(current_angle > start_angle)
+	{
+		v += friction;
+		current_angle -= v;
+	}
+	return v -= friction;
+}
+
+static float get_punch_tilt(float start_tilt, float end_tilt, float friction)
+{
+	float current_tilt = end_tilt;
+	float v = 0.0;
+
+	while(current_tilt > start_tilt)
+	{
+		v += friction;
+		current_tilt -= v;
+	}
+	return v -= friction;
+}
+
+static float get_acceleration(float distance, float t)
+{
+	return (2.0 * distance) / (t * t);
+}
+
 /* main logic routine */
 void app_logic(void * data)
 {
 	APP_INSTANCE * app = (APP_INSTANCE *)data;
 
+	if(t3f_key[ALLEGRO_KEY_SPACE])
+	{
+		app->vf_angle = -get_acceleration(ALLEGRO_PI * 2.25, 60.0);
+		app->v_angle = get_punch_velocity(0, ALLEGRO_PI * 2.25, -app->vf_angle);
+		app->vf_tilt = -get_acceleration(0.5, 60.0);
+		app->v_tilt = get_punch_tilt(0.0, 0.5, -app->vf_tilt);
+		t3f_key[ALLEGRO_KEY_SPACE] = 0;
+	}
+	if(app->v_tilt > 0.0)
+	{
+		app->tilt += app->v_tilt;
+		app->v_tilt += app->vf_tilt;
+		if(app->v_tilt <= 0.0)
+		{
+			app->tilt = 0.5;
+		}
+	}
+	if(app->v_angle > 0.0)
+	{
+		app->angle += app->v_angle;
+		app->v_angle += app->vf_angle;
+		if(app->v_angle <= 0.0)
+		{
+			app->angle = ALLEGRO_PI * 2.25;
+		}
+	}
+
+	/* manual controls */
 	if(t3f_key[ALLEGRO_KEY_LEFT])
 	{
 		app->angle -= ALLEGRO_PI / 16.0;
