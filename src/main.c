@@ -1,15 +1,18 @@
 #include "t3f/t3f.h"
 
-#define MAX_VERTICES 64
+#define _T3LOGO_MAX_VERTICES 64
+
+#define _T3LOGO_TARGET_TILT  (0.5)
+#define _T3LOGO_TARGET_ANGLE (ALLEGRO_PI * 2.25)
 
 /* shape constructed of triplets of vertices */
 typedef struct
 {
 
-	ALLEGRO_VERTEX vertex[MAX_VERTICES];
+	ALLEGRO_VERTEX vertex[_T3LOGO_MAX_VERTICES];
 	int vertex_count;
 
-	ALLEGRO_VERTEX transformed_vertex[MAX_VERTICES];
+	ALLEGRO_VERTEX transformed_vertex[_T3LOGO_MAX_VERTICES];
 
 } SHAPE;
 
@@ -105,11 +108,11 @@ void app_logic(void * data)
 	{
 		app->tick = 60;
 		app->angle = 0;
-		app->vf_angle = -get_acceleration(ALLEGRO_PI * 2.25, app->tick);
-		app->v_angle = get_punch_velocity(0, ALLEGRO_PI * 2.25, -app->vf_angle);
+		app->vf_angle = -get_acceleration(_T3LOGO_TARGET_ANGLE, app->tick);
+		app->v_angle = get_punch_velocity(0, _T3LOGO_TARGET_ANGLE, -app->vf_angle);
 		app->tilt = 0;
-		app->vf_tilt = -get_acceleration(0.5, app->tick);
-		app->v_tilt = get_punch_tilt(0.0, 0.5, -app->vf_tilt);
+		app->vf_tilt = -get_acceleration(_T3LOGO_TARGET_TILT, app->tick);
+		app->v_tilt = get_punch_tilt(0.0, _T3LOGO_TARGET_TILT, -app->vf_tilt);
 		t3f_key[ALLEGRO_KEY_SPACE] = 0;
 	}
 	if(app->tick > -8)
@@ -122,8 +125,8 @@ void app_logic(void * data)
 	}
 	else if(app->tick == -8)
 	{
-		app->tilt = 0.5;
-		app->angle = ALLEGRO_PI * 2.25;
+		app->tilt = _T3LOGO_TARGET_TILT;
+		app->angle = _T3LOGO_TARGET_ANGLE;
 		app->tick--;
 	}
 
