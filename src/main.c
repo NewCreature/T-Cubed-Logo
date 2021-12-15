@@ -24,6 +24,7 @@ typedef struct
 	float vf_tilt;  // tilt velocity friction
 	float v_angle;  // angle velocity
 	float vf_angle; // angle velocity friction
+	int tick;
 
 } APP_INSTANCE;
 
@@ -74,7 +75,7 @@ static float get_punch_velocity(float start_angle, float end_angle, float fricti
 		v += friction;
 		current_angle -= v;
 	}
-	return v -= friction;
+	return v;
 }
 
 static float get_punch_tilt(float start_tilt, float end_tilt, float friction)
@@ -87,7 +88,7 @@ static float get_punch_tilt(float start_tilt, float end_tilt, float friction)
 		v += friction;
 		current_tilt -= v;
 	}
-	return v -= friction;
+	return v;
 }
 
 static float get_acceleration(float distance, float t)
@@ -102,29 +103,28 @@ void app_logic(void * data)
 
 	if(t3f_key[ALLEGRO_KEY_SPACE])
 	{
-		app->vf_angle = -get_acceleration(ALLEGRO_PI * 2.25, 60.0);
+		app->tick = 60;
+		app->angle = 0;
+		app->vf_angle = -get_acceleration(ALLEGRO_PI * 2.25, app->tick);
 		app->v_angle = get_punch_velocity(0, ALLEGRO_PI * 2.25, -app->vf_angle);
-		app->vf_tilt = -get_acceleration(0.5, 60.0);
+		app->tilt = 0;
+		app->vf_tilt = -get_acceleration(0.5, app->tick);
 		app->v_tilt = get_punch_tilt(0.0, 0.5, -app->vf_tilt);
 		t3f_key[ALLEGRO_KEY_SPACE] = 0;
 	}
-	if(app->v_tilt > 0.0)
+	if(app->tick > -8)
 	{
 		app->tilt += app->v_tilt;
 		app->v_tilt += app->vf_tilt;
-		if(app->v_tilt <= 0.0)
-		{
-			app->tilt = 0.5;
-		}
-	}
-	if(app->v_angle > 0.0)
-	{
 		app->angle += app->v_angle;
 		app->v_angle += app->vf_angle;
-		if(app->v_angle <= 0.0)
-		{
-			app->angle = ALLEGRO_PI * 2.25;
-		}
+		app->tick--;
+	}
+	else if(app->tick == -8)
+	{
+		app->tilt = 0.5;
+		app->angle = ALLEGRO_PI * 2.25;
+		app->tick--;
 	}
 
 	/* manual controls */
@@ -219,6 +219,9 @@ bool app_initialize(APP_INSTANCE * app, int argc, char * argv[])
 	add_vertex(&app->logo_side[2], 1, -1, 3);
 	add_vertex(&app->logo_side[2], 1, 3, 3);
 	add_vertex(&app->logo_side[2], -1, 3, 3);
+
+	app->tick = -1000;
+
 	return true;
 }
 
