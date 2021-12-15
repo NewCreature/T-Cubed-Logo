@@ -82,7 +82,7 @@ static ALLEGRO_COLOR get_lit_color(ALLEGRO_COLOR base_color, float light_angle, 
 
 	al_unmap_rgb_f(base_color, &r, &g, &b);
 	al_color_rgb_to_hsl(r, g, b, &h, &s, &l);
-	target_l = linear_spread(light_angle, side_normal_angle, l / 2.0, l);
+	target_l = linear_spread(light_angle, side_normal_angle, l * 0.75, l);
 //	target_l = (1.0 - fmod(fabs(light_angle - side_normal_angle), ALLEGRO_PI) / ALLEGRO_PI) * l;
 
 	return al_color_hsl(h, s, target_l);
