@@ -233,6 +233,11 @@ bool app_initialize(APP_INSTANCE * app, int argc, char * argv[])
 		printf("Error initializing T3F\n");
 		return false;
 	}
+	al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
+	al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
+	al_destroy_display(t3f_display);
+	t3f_display = NULL;
+	t3f_set_gfx_mode(1280, 720, t3f_flags);
 	memset(app, 0, sizeof(APP_INSTANCE));
 	init_shape(&app->logo_side[0]);
 	add_vertex(&app->logo_side[0], -3, -3, -3);
