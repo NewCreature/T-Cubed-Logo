@@ -5,6 +5,11 @@
 #define _T3LOGO_TARGET_TILT  (0.5)
 #define _T3LOGO_TARGET_ANGLE (ALLEGRO_PI * 2.25)
 #define _T3LOGO_LIGHT_ANGLE  (ALLEGRO_PI * 1.25)
+#define _T3LOGO_BOTTOM 1.55
+#define _T3LOGO_BAR_BOTTOM -1.25
+#define _T3LOGO_OUTLINE_SIZE 0.5
+
+#define _T3LOGO_BITMAP_SIZE 540
 
 /* shape constructed of triplets of vertices */
 typedef struct
@@ -23,6 +28,7 @@ typedef struct
 typedef struct
 {
 
+	ALLEGRO_BITMAP * logo_bitmap;
 	SHAPE logo_side[3];
 	SHAPE * logo_side_zsort[3];
 	float angle;
@@ -109,6 +115,16 @@ static void set_shape_orientation(SHAPE * sp, float ox, float oy, float angle, f
 		sp->transformed_vertex[i].y = oy + (sp->vertex[i].y + temp_z * tilt) * scale;
 		sp->transformed_vertex[i].z = 0;
 		sp->transformed_vertex[i].color = get_lit_color(al_map_rgb(46, 104, 158), _T3LOGO_LIGHT_ANGLE, sp->angle);
+	}
+}
+
+static void set_shape_color(SHAPE * sp, ALLEGRO_COLOR color)
+{
+	int i;
+
+	for(i = 0; i < sp->vertex_count; i++)
+	{
+		sp->transformed_vertex[i].color = color;
 	}
 }
 
@@ -222,6 +238,7 @@ void app_render(void * data)
 	render_shape(app->logo_side_zsort[0]);
 	render_shape(app->logo_side_zsort[1]);
 	render_shape(app->logo_side_zsort[2]);
+	t3f_draw_scaled_bitmap(app->logo_bitmap, al_map_rgba_f(0.5, 0.5, 0.5, 0.5), t3f_virtual_display_width / 2 - _T3LOGO_BITMAP_SIZE / 2, t3f_virtual_display_height / 2 - _T3LOGO_BITMAP_SIZE / 2 - 43, 0, _T3LOGO_BITMAP_SIZE, _T3LOGO_BITMAP_SIZE, 0);
 }
 
 /* initialize our app, load graphics, etc. */
@@ -238,48 +255,55 @@ bool app_initialize(APP_INSTANCE * app, int argc, char * argv[])
 	al_destroy_display(t3f_display);
 	t3f_display = NULL;
 	t3f_set_gfx_mode(1280, 720, t3f_flags);
+
 	memset(app, 0, sizeof(APP_INSTANCE));
+
+	app->logo_bitmap = al_load_bitmap("data/logo.png");
+	if(!app->logo_bitmap)
+	{
+		return false;
+	}
 	init_shape(&app->logo_side[0]);
 	add_vertex(&app->logo_side[0], -3, -3, -3);
 	add_vertex(&app->logo_side[0], 3, -3, -3);
-	add_vertex(&app->logo_side[0], -3, -1, -3);
+	add_vertex(&app->logo_side[0], -3, _T3LOGO_BAR_BOTTOM, -3);
 	add_vertex(&app->logo_side[0], 3, -3, -3);
-	add_vertex(&app->logo_side[0], 3, -1, -3);
-	add_vertex(&app->logo_side[0], -3, -1, -3);
-	add_vertex(&app->logo_side[0], -1, -1, -3);
-	add_vertex(&app->logo_side[0], 1, -1, -3);
-	add_vertex(&app->logo_side[0], -1, 3, -3);
-	add_vertex(&app->logo_side[0], 1, -1, -3);
-	add_vertex(&app->logo_side[0], 1, 3, -3);
-	add_vertex(&app->logo_side[0], -1, 3, -3);
+	add_vertex(&app->logo_side[0], 3, _T3LOGO_BAR_BOTTOM, -3);
+	add_vertex(&app->logo_side[0], -3, _T3LOGO_BAR_BOTTOM, -3);
+	add_vertex(&app->logo_side[0], -1, _T3LOGO_BAR_BOTTOM, -3);
+	add_vertex(&app->logo_side[0], 1, _T3LOGO_BAR_BOTTOM, -3);
+	add_vertex(&app->logo_side[0], -1, _T3LOGO_BOTTOM, -3);
+	add_vertex(&app->logo_side[0], 1, _T3LOGO_BAR_BOTTOM, -3);
+	add_vertex(&app->logo_side[0], 1, _T3LOGO_BOTTOM, -3);
+	add_vertex(&app->logo_side[0], -1, _T3LOGO_BOTTOM, -3);
 
 	init_shape(&app->logo_side[1]);
 	add_vertex(&app->logo_side[1], 3, -3, -3);
 	add_vertex(&app->logo_side[1], 3, -3, 3);
-	add_vertex(&app->logo_side[1], 3, -1, -3);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BAR_BOTTOM, -3);
 	add_vertex(&app->logo_side[1], 3, -3, 3);
-	add_vertex(&app->logo_side[1], 3, -1, 3);
-	add_vertex(&app->logo_side[1], 3, -1, -3);
-	add_vertex(&app->logo_side[1], 3, -1, -1);
-	add_vertex(&app->logo_side[1], 3, -1, 1);
-	add_vertex(&app->logo_side[1], 3, 3, -1);
-	add_vertex(&app->logo_side[1], 3, -1, 1);
-	add_vertex(&app->logo_side[1], 3, 3, 1);
-	add_vertex(&app->logo_side[1], 3, 3, -1);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BAR_BOTTOM, 3);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BAR_BOTTOM, -3);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BAR_BOTTOM, -1);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BAR_BOTTOM, 1);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BOTTOM, -1);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BAR_BOTTOM, 1);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BOTTOM, 1);
+	add_vertex(&app->logo_side[1], 3, _T3LOGO_BOTTOM, -1);
 
 	init_shape(&app->logo_side[2]);
 	add_vertex(&app->logo_side[2], -3, -3, 3);
 	add_vertex(&app->logo_side[2], 3, -3, 3);
-	add_vertex(&app->logo_side[2], -3, -1, 3);
+	add_vertex(&app->logo_side[2], -3, _T3LOGO_BAR_BOTTOM, 3);
 	add_vertex(&app->logo_side[2], 3, -3, 3);
-	add_vertex(&app->logo_side[2], 3, -1, 3);
-	add_vertex(&app->logo_side[2], -3, -1, 3);
-	add_vertex(&app->logo_side[2], -1, -1, 3);
-	add_vertex(&app->logo_side[2], 1, -1, 3);
-	add_vertex(&app->logo_side[2], -1, 3, 3);
-	add_vertex(&app->logo_side[2], 1, -1, 3);
-	add_vertex(&app->logo_side[2], 1, 3, 3);
-	add_vertex(&app->logo_side[2], -1, 3, 3);
+	add_vertex(&app->logo_side[2], 3, _T3LOGO_BAR_BOTTOM, 3);
+	add_vertex(&app->logo_side[2], -3, _T3LOGO_BAR_BOTTOM, 3);
+	add_vertex(&app->logo_side[2], -1, _T3LOGO_BAR_BOTTOM, 3);
+	add_vertex(&app->logo_side[2], 1, _T3LOGO_BAR_BOTTOM, 3);
+	add_vertex(&app->logo_side[2], -1, _T3LOGO_BOTTOM, 3);
+	add_vertex(&app->logo_side[2], 1, _T3LOGO_BAR_BOTTOM, 3);
+	add_vertex(&app->logo_side[2], 1, _T3LOGO_BOTTOM, 3);
+	add_vertex(&app->logo_side[2], -1, _T3LOGO_BOTTOM, 3);
 
 	app->logo_side_zsort[0] = &app->logo_side[0];
 	app->logo_side_zsort[1] = &app->logo_side[1];
