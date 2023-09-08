@@ -204,11 +204,11 @@ void app_logic(void * data)
 		printf("tilt %f\n", app->tilt);
 		t3f_key[ALLEGRO_KEY_DOWN] = 0;
 	}
-	set_shape_orientation(&app->logo_side[0], 256, 256, app->angle, app->tilt, 48);
+	set_shape_orientation(&app->logo_side[0], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2, app->angle, app->tilt, 48);
 	app->logo_side[0].angle = app->angle + ALLEGRO_PI / 2.0;
-	set_shape_orientation(&app->logo_side[1], 256, 256, app->angle, app->tilt, 48);
+	set_shape_orientation(&app->logo_side[1], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2, app->angle, app->tilt, 48);
 	app->logo_side[1].angle = app->angle + ALLEGRO_PI;
-	set_shape_orientation(&app->logo_side[2], 256, 256, app->angle, app->tilt, 48);
+	set_shape_orientation(&app->logo_side[2], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2, app->angle, app->tilt, 48);
 	app->logo_side[2].angle = app->angle + ALLEGRO_PI * 1.5;
 	qsort(app->logo_side_zsort, 3, sizeof(SHAPE *), side_z_depth_qsort_proc);
 }
@@ -228,7 +228,7 @@ void app_render(void * data)
 bool app_initialize(APP_INSTANCE * app, int argc, char * argv[])
 {
 	/* initialize T3F */
-	if(!t3f_initialize(T3F_APP_TITLE, 640, 480, 60.0, app_logic, app_render, T3F_DEFAULT, app))
+	if(!t3f_initialize(T3F_APP_TITLE, 1280, 720, 60.0, app_logic, app_render, T3F_DEFAULT | T3F_USE_FULLSCREEN, app))
 	{
 		printf("Error initializing T3F\n");
 		return false;
