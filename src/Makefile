@@ -74,6 +74,9 @@ mac_package:
 iphone_package:
 	$(MAKE) -f ../scripts/makefile.iphone -I ../scripts iphone_package
 
+flatpak:
+	$(MAKE) -f ../scripts/makefile.flatpak -I ../scripts flatpak
+
 demo:
 	$(MAKE) -f ../scripts/makefile.$(SYSTEM) -I ../scripts demo
 
@@ -82,3 +85,18 @@ demo_gp:
 
 makeicon:
 	$(MAKE) -f ../scripts/makefile.$(SYSTEM) -I ../scripts ../win32/makeicon
+
+reset_config:
+	$(MAKE) -f ../scripts/makefile.$(SYSTEM) -I ../scripts reset_config
+
+finish:
+	$(MAKE) -f ../scripts/makefile.$(SYSTEM) -I ../scripts finish
+
+install:
+	$(MAKE) -f ../scripts/makefile.$(SYSTEM) -I ../scripts install
+
+uninstall:
+	$(MAKE) -f ../scripts/makefile.$(SYSTEM) -I ../scripts uninstall
+
+install_flatpak:
+	$(MAKE) -f ../scripts/makefile.$(SYSTEM) -I ../scripts install_flatpak

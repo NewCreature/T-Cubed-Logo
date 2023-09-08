@@ -1,8 +1,9 @@
+T3F_PREFIX = /usr/local
 T3F_PLATFORM_NAME = macos
 T3F_CXX_STDLIB = -l$(MACOS_CXX_STDLIB)
 CC = $(MACOS_CC)
 CFLAGS = $(APP_CFLAGS) $(T3F_CFLAGS) $(MACOS_ARCHITECTURES) $(MACOS_CONFIG_CFLAGS) $(MACOS_SYS_ROOT) $(MACOS_MIN_VERSION) $(MACOS_CXX_STANDARD) $(APP_CFLAGS) $(MACOS_CFLAGS) -I/usr/local/include
-CXX = $(MACOS_CXX)
+CXX = $(MACOS_CXX) $(MACOS_CONFIG_CXXFLAGS)
 CXXFLAGS = $(CFLAGS) -stdlib=lib$(MACOS_CXX_STDLIB)
 LFLAGS = $(MACOS_CONFIG_LFLAGS) $(MACOS_ARCHITECTURES) $(MACOS_SYS_ROOT) $(MACOS_MIN_VERSION) -L/usr/local/lib -stdlib=lib$(MACOS_CXX_STDLIB)
 ALLEGRO_SUFFIX = $(MACOS_CONFIG_ALLEGRO_SUFFIX)
@@ -42,6 +43,9 @@ include makefile.common
 prepare_platform:
 	@echo Ready to build...
 
+../macos/Info.plist: ../macos/default_Info.plist
+	@cp ../macos/default_Info.plist ../macos/Info.plist
+
 ../icons/macos_icon.icns: ../icons/16.png ../icons/32.png ../icons/64.png ../icons/128.png ../icons/256.png ../icons/512.png ../icons/1024.png
 	@mkdir -p temp.iconset
 	@cp ../icons/16.png temp.iconset/icon_16x16.png
@@ -59,7 +63,7 @@ prepare_platform:
 	@iconutil --convert icns temp.iconset -o ../icons/macos_icon.icns
 	@rm -rf temp.iconset
 
-mac_bundle : ../icons/macos_icon.icns
+mac_bundle : ../icons/macos_icon.icns ../macos/Info.plist
 	@$(DEL_FOLDER_COMMAND) $(APP_PACKAGE_DIR)/$(APP_TITLE).app
 	@mkdir $(APP_PACKAGE_DIR)/$(APP_TITLE).app
 	@mkdir $(APP_PACKAGE_DIR)/$(APP_TITLE).app/Contents
@@ -77,7 +81,7 @@ mac_bundle : ../icons/macos_icon.icns
 	@sed -i '' "s|T3F_APP_ICON|$(APP_TITLE).icns|" $(APP_PACKAGE_DIR)/$(APP_TITLE).app/Contents/Info.plist
 	@sed -i '' "s|T3F_APP_DISPLAY_NAME|$(APP_TITLE)|" $(APP_PACKAGE_DIR)/$(APP_TITLE).app/Contents/Info.plist
 	@sed -i '' "s|T3F_APP_VERSION|$(APP_VERSION)|" $(APP_PACKAGE_DIR)/$(APP_TITLE).app/Contents/Info.plist
-	@sed -i '' "s|T3F_APP_PACKAGE|$(APP_ANDROID_PACKAGE)|" $(APP_PACKAGE_DIR)/$(APP_TITLE).app/Contents/Info.plist
+	@sed -i '' "s|T3F_APP_PACKAGE|$(APP_ID)|" $(APP_PACKAGE_DIR)/$(APP_TITLE).app/Contents/Info.plist
 	@echo Application bundle created!
 
 mac_universal_bundle:

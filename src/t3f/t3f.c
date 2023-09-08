@@ -31,6 +31,9 @@
 #ifdef ALLEGRO_WINDOWS
 	#include "windows.h"
 #endif
+#ifdef T3F_PNG
+	#include "png.h"
+#endif
 
 /* display data */
 int t3f_virtual_display_width = 0;
@@ -320,6 +323,42 @@ static bool t3f_locate_resource(const char * filename)
 			return true;
 		}
 	}
+
+	/* look in "/usr/share" if a package name is defined */
+	if(t3f_package_name)
+	{
+		file_path = al_create_path(filename);
+		if(!file_path)
+		{
+			return false;
+		}
+		path = al_create_path("/usr/local/share/");
+		if(path)
+		{
+			al_append_path_component(path, t3f_package_name);
+			al_join_paths(path, file_path);
+			if(al_filename_exists(al_path_cstr(path, '/')))
+			{
+				al_change_directory(al_path_cstr(path, '/'));
+				found = true;
+			}
+//			printf("%s\n", al_path_cstr(path, '/'));
+			al_destroy_path(path);
+		}
+		al_destroy_path(file_path);
+	}
+
+	if(found)
+	{
+		path = al_create_path("/usr/local/share/");
+		if(path)
+		{
+			al_append_path_component(path, t3f_package_name);
+			al_change_directory(al_path_cstr(path, '/'));
+			al_destroy_path(path);
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -391,6 +430,9 @@ int t3f_initialize(const char * name, int w, int h, double fps, void (*logic_pro
 		printf("Failed to initialize image add-on!\n");
 		return 0;
 	}
+	#ifdef T3F_PNG
+		t3f_enable_internal_png_handler();
+	#endif
 	al_init_font_addon();
 	if(!al_init_ttf_addon())
 	{
@@ -507,7 +549,9 @@ int t3f_initialize(const char * name, int w, int h, double fps, void (*logic_pro
 	t3f_color_white = al_map_rgba_f(1.0, 1.0, 1.0, 1.0);
 	t3f_color_black = al_map_rgba_f(0.0, 0.0, 0.0, 1.0);
 	al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR);
-	al_inhibit_screensaver(true); // stop screensaver from showing
+	#ifndef T3F_NO_KEEP_AWAKE
+		al_inhibit_screensaver(true); // stop screensaver from showing
+	#endif
 
 	t3f_logic_proc = logic_proc;
 	t3f_render_proc = render_proc;
@@ -890,7 +934,7 @@ void t3f_set_clipping_rectangle(int x, int y, int w, int h)
 	}
 	al_transform_coordinates(&t3f_current_transform, &tx, &ty);
 	al_transform_coordinates(&t3f_current_transform, &twx, &twy);
-	al_set_clipping_rectangle(tx, ty, twx - tx, twy - ty);
+	al_set_clipping_rectangle(tx + 0.5, ty + 0.5, twx - tx + 0.5, twy - ty + 0.5);
 }
 
 void t3f_set_event_handler(void (*proc)(ALLEGRO_EVENT * event, void * data))
@@ -1007,6 +1051,11 @@ void t3f_set_mouse_xy(float x, float y)
 {
 	al_transform_coordinates(&t3f_current_view->transform, &x, &y);
 	al_set_mouse_xy(t3f_display, x, y);
+	t3f_real_mouse_x = x;
+	t3f_real_mouse_y = y;
+	t3f_touch[0].real_x = x;
+	t3f_touch[0].real_y = y;
+	t3f_select_input_view(t3f_current_view);
 }
 
 void t3f_clear_touch_data(void)
@@ -1132,6 +1181,7 @@ void t3f_event_handler(ALLEGRO_EVENT * event)
 		{
 			char val[8] = {0};
 			al_acknowledge_resize(t3f_display);
+			t3f_handle_menu_resize();
 			handle_view_resize();
 			sprintf(val, "%d", al_get_display_width(t3f_display));
 			al_set_config_value(t3f_config, "T3F", "display_width", val);
