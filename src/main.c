@@ -11,6 +11,8 @@
 #define _T3LOGO_OUTLINE_COLOR al_map_rgb(150, 189, 224)
 #define _T3LOGO_BACKGROUND_COLOR al_map_rgb(16, 16, 16)
 #define _T3LOGO_SCALE 47.75
+#define _T3LOGO_FADE_IN 0.025
+#define _T3LOGO_Y_OFFSET 26
 
 #define _T3LOGO_BITMAP_SIZE 540
 
@@ -34,6 +36,8 @@ typedef struct
 	ALLEGRO_BITMAP * logo_bitmap;
 	SHAPE logo_side[3];
 	SHAPE * logo_side_zsort[3];
+	float logo_fade;
+	float logo_vfade;
 	float angle;
 	float tilt;
 	float v_tilt;   // tilt velocity
@@ -173,6 +177,8 @@ void app_logic(void * data)
 
 	if(t3f_key[ALLEGRO_KEY_SPACE])
 	{
+		app->logo_fade = 0.0;
+		app->logo_vfade = _T3LOGO_FADE_IN;
 		app->tick = 60;
 		app->angle = 0;
 		app->vf_angle = -get_acceleration(_T3LOGO_TARGET_ANGLE, app->tick);
@@ -195,6 +201,14 @@ void app_logic(void * data)
 		app->tilt = _T3LOGO_TARGET_TILT;
 		app->angle = _T3LOGO_TARGET_ANGLE;
 		app->tick--;
+	}
+	else
+	{
+		app->logo_fade += app->logo_vfade;
+		if(app->logo_fade > 1.0)
+		{
+			app->logo_fade = 1.0;
+		}
 	}
 
 	/* manual controls */
@@ -222,11 +236,11 @@ void app_logic(void * data)
 		printf("tilt %f\n", app->tilt);
 		t3f_key[ALLEGRO_KEY_DOWN] = 0;
 	}
-	set_shape_orientation(&app->logo_side[0], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2, app->angle, app->tilt, _T3LOGO_SCALE);
+	set_shape_orientation(&app->logo_side[0], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2 + _T3LOGO_Y_OFFSET, app->angle, app->tilt, _T3LOGO_SCALE);
 	app->logo_side[0].angle = app->angle + ALLEGRO_PI / 2.0;
-	set_shape_orientation(&app->logo_side[1], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2, app->angle, app->tilt, _T3LOGO_SCALE);
+	set_shape_orientation(&app->logo_side[1], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2 + _T3LOGO_Y_OFFSET, app->angle, app->tilt, _T3LOGO_SCALE);
 	app->logo_side[1].angle = app->angle + ALLEGRO_PI;
-	set_shape_orientation(&app->logo_side[2], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2, app->angle, app->tilt, _T3LOGO_SCALE);
+	set_shape_orientation(&app->logo_side[2], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2 + _T3LOGO_Y_OFFSET, app->angle, app->tilt, _T3LOGO_SCALE);
 	app->logo_side[2].angle = app->angle + ALLEGRO_PI * 1.5;
 	qsort(app->logo_side_zsort, 3, sizeof(SHAPE *), side_z_depth_qsort_proc);
 }
@@ -249,7 +263,7 @@ void app_render(void * data)
 	al_clear_to_color(_T3LOGO_BACKGROUND_COLOR);
 	render_logo(app, true);
 	render_logo(app, false);
-	t3f_draw_scaled_bitmap(app->logo_bitmap, al_map_rgba_f(0.5, 0.5, 0.5, 0.5), t3f_virtual_display_width / 2 - _T3LOGO_BITMAP_SIZE / 2, t3f_virtual_display_height / 2 - _T3LOGO_BITMAP_SIZE / 2 - 42, 0, _T3LOGO_BITMAP_SIZE, _T3LOGO_BITMAP_SIZE, 0);
+	t3f_draw_scaled_bitmap(app->logo_bitmap, al_map_rgba_f(app->logo_fade, app->logo_fade, app->logo_fade, app->logo_fade), t3f_virtual_display_width / 2 - _T3LOGO_BITMAP_SIZE / 2, t3f_virtual_display_height / 2 - _T3LOGO_BITMAP_SIZE / 2 - 42 + _T3LOGO_Y_OFFSET, 0, _T3LOGO_BITMAP_SIZE, _T3LOGO_BITMAP_SIZE, 0);
 }
 
 /* initialize our app, load graphics, etc. */
@@ -274,6 +288,8 @@ bool app_initialize(APP_INSTANCE * app, int argc, char * argv[])
 	{
 		return false;
 	}
+	app->logo_fade = 0.0;
+	app->logo_vfade = 0.0;
 	init_shape(&app->logo_side[0]);
 	add_vertex(&app->logo_side[0], -3, -3, -3);
 	add_vertex(&app->logo_side[0], 3, -3, -3);
