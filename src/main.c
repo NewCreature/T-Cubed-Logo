@@ -11,10 +11,18 @@
 #define _T3LOGO_OUTLINE_COLOR al_map_rgb(150, 189, 224)
 #define _T3LOGO_BACKGROUND_COLOR al_map_rgb(16, 16, 16)
 #define _T3LOGO_SCALE 47.75
-#define _T3LOGO_FADE_IN 0.025
+#define _T3LOGO_FADE_IN 0.015
 #define _T3LOGO_Y_OFFSET 26
 
 #define _T3LOGO_BITMAP_SIZE 540
+
+#define _T3LOGO_STATE_FADE_IN      0
+#define _T3LOGO_STATE_WAIT         1
+#define _T3LOGO_STATE_SPIN         2
+#define _T3LOGO_STATE_FADE_OUTLINE 3
+#define _T3LOGO_STATE_FADE_FLASH   4
+#define _T3LOGO_STATE_DONE         5
+#define _T3LOGO_STATE_FADE_OUT     6
 
 /* shape constructed of triplets of vertices */
 typedef struct
@@ -34,16 +42,22 @@ typedef struct
 {
 
 	ALLEGRO_BITMAP * logo_bitmap;
+	ALLEGRO_BITMAP * logo_outline_bitmap;
+	ALLEGRO_SAMPLE * logo_bump_sound;
+	ALLEGRO_SAMPLE * logo_click_sound;
 	SHAPE logo_side[3];
 	SHAPE * logo_side_zsort[3];
+	float fade;
 	float logo_fade;
 	float logo_vfade;
+	float logo_overlay_fade;
 	float angle;
 	float tilt;
 	float v_tilt;   // tilt velocity
 	float vf_tilt;  // tilt velocity friction
 	float v_angle;  // angle velocity
 	float vf_angle; // angle velocity friction
+	int state;
 	int tick;
 
 } APP_INSTANCE;
@@ -170,72 +184,8 @@ static float get_acceleration(float distance, float t)
 	return (2.0 * distance) / (t * t);
 }
 
-/* main logic routine */
-void app_logic(void * data)
+static void update_logo(APP_INSTANCE * app)
 {
-	APP_INSTANCE * app = (APP_INSTANCE *)data;
-
-	if(t3f_key[ALLEGRO_KEY_SPACE])
-	{
-		app->logo_fade = 0.0;
-		app->logo_vfade = _T3LOGO_FADE_IN;
-		app->tick = 60;
-		app->angle = 0;
-		app->vf_angle = -get_acceleration(_T3LOGO_TARGET_ANGLE, app->tick);
-		app->v_angle = get_punch_velocity(0, _T3LOGO_TARGET_ANGLE, -app->vf_angle);
-		app->tilt = 0;
-		app->vf_tilt = -get_acceleration(_T3LOGO_TARGET_TILT, app->tick);
-		app->v_tilt = get_punch_tilt(0.0, _T3LOGO_TARGET_TILT, -app->vf_tilt);
-		t3f_key[ALLEGRO_KEY_SPACE] = 0;
-	}
-	if(app->tick > -8)
-	{
-		app->tilt += app->v_tilt;
-		app->v_tilt += app->vf_tilt;
-		app->angle += app->v_angle;
-		app->v_angle += app->vf_angle;
-		app->tick--;
-	}
-	else if(app->tick == -8)
-	{
-		app->tilt = _T3LOGO_TARGET_TILT;
-		app->angle = _T3LOGO_TARGET_ANGLE;
-		app->tick--;
-	}
-	else
-	{
-		app->logo_fade += app->logo_vfade;
-		if(app->logo_fade > 1.0)
-		{
-			app->logo_fade = 1.0;
-		}
-	}
-
-	/* manual controls */
-	if(t3f_key[ALLEGRO_KEY_LEFT])
-	{
-		app->angle -= ALLEGRO_PI / 16.0;
-		printf("angle %f\n", app->angle);
-		t3f_key[ALLEGRO_KEY_LEFT] = 0;
-	}
-	if(t3f_key[ALLEGRO_KEY_RIGHT])
-	{
-		app->angle += ALLEGRO_PI / 16.0;
-		printf("angle %f\n", app->angle);
-		t3f_key[ALLEGRO_KEY_RIGHT] = 0;
-	}
-	if(t3f_key[ALLEGRO_KEY_UP])
-	{
-		app->tilt -= 0.1;
-		printf("tilt %f\n", app->tilt);
-		t3f_key[ALLEGRO_KEY_UP] = 0;
-	}
-	if(t3f_key[ALLEGRO_KEY_DOWN])
-	{
-		app->tilt += 0.1;
-		printf("tilt %f\n", app->tilt);
-		t3f_key[ALLEGRO_KEY_DOWN] = 0;
-	}
 	set_shape_orientation(&app->logo_side[0], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2 + _T3LOGO_Y_OFFSET, app->angle, app->tilt, _T3LOGO_SCALE);
 	app->logo_side[0].angle = app->angle + ALLEGRO_PI / 2.0;
 	set_shape_orientation(&app->logo_side[1], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2 + _T3LOGO_Y_OFFSET, app->angle, app->tilt, _T3LOGO_SCALE);
@@ -243,6 +193,136 @@ void app_logic(void * data)
 	set_shape_orientation(&app->logo_side[2], t3f_virtual_display_width / 2, t3f_virtual_display_height / 2 + _T3LOGO_Y_OFFSET, app->angle, app->tilt, _T3LOGO_SCALE);
 	app->logo_side[2].angle = app->angle + ALLEGRO_PI * 1.5;
 	qsort(app->logo_side_zsort, 3, sizeof(SHAPE *), side_z_depth_qsort_proc);
+}
+
+/* main logic routine */
+void app_logic(void * data)
+{
+	APP_INSTANCE * app = (APP_INSTANCE *)data;
+
+	switch(app->state)
+	{
+		case _T3LOGO_STATE_FADE_IN:
+		{
+			app->fade -= _T3LOGO_FADE_IN;
+			if(app->fade <= 0.0)
+			{
+				app->state = _T3LOGO_STATE_WAIT;
+				app->fade = 0.0;
+			}
+			break;
+		}
+		case _T3LOGO_STATE_WAIT:
+		{
+			if(t3f_key[ALLEGRO_KEY_SPACE])
+			{
+				t3f_play_sample(app->logo_bump_sound, 1.0, 0.0, 1.0);
+				app->logo_fade = 0.0;
+				app->logo_vfade = _T3LOGO_FADE_IN;
+				app->tick = 60;
+				app->angle = 0;
+				app->vf_angle = -get_acceleration(_T3LOGO_TARGET_ANGLE, app->tick);
+				app->v_angle = get_punch_velocity(0, _T3LOGO_TARGET_ANGLE, -app->vf_angle);
+				app->tilt = 0;
+				app->vf_tilt = -get_acceleration(_T3LOGO_TARGET_TILT, app->tick);
+				app->v_tilt = get_punch_tilt(0.0, _T3LOGO_TARGET_TILT, -app->vf_tilt);
+				app->state = _T3LOGO_STATE_SPIN;
+				t3f_key[ALLEGRO_KEY_SPACE] = 0;
+			}
+			/* manual controls */
+			if(t3f_key[ALLEGRO_KEY_LEFT])
+			{
+				app->angle -= ALLEGRO_PI / 16.0;
+				printf("angle %f\n", app->angle);
+				t3f_key[ALLEGRO_KEY_LEFT] = 0;
+			}
+			if(t3f_key[ALLEGRO_KEY_RIGHT])
+			{
+				app->angle += ALLEGRO_PI / 16.0;
+				printf("angle %f\n", app->angle);
+				t3f_key[ALLEGRO_KEY_RIGHT] = 0;
+			}
+			if(t3f_key[ALLEGRO_KEY_UP])
+			{
+				app->tilt -= 0.1;
+				printf("tilt %f\n", app->tilt);
+				t3f_key[ALLEGRO_KEY_UP] = 0;
+			}
+			if(t3f_key[ALLEGRO_KEY_DOWN])
+			{
+				app->tilt += 0.1;
+				printf("tilt %f\n", app->tilt);
+				t3f_key[ALLEGRO_KEY_DOWN] = 0;
+			}
+			break;
+		}
+		case _T3LOGO_STATE_SPIN:
+		{
+			if(app->tick > -8)
+			{
+				app->tilt += app->v_tilt;
+				app->v_tilt += app->vf_tilt;
+				app->angle += app->v_angle;
+				app->v_angle += app->vf_angle;
+				app->tick--;
+			}
+			else if(app->tick == -8)
+			{
+				t3f_play_sample(app->logo_click_sound, 1.0, 0.0, 1.0);
+				app->tilt = _T3LOGO_TARGET_TILT;
+				app->angle = _T3LOGO_TARGET_ANGLE;
+				app->state = _T3LOGO_STATE_FADE_OUTLINE;
+				app->tick--;
+			}
+			update_logo(app);
+			break;
+		}
+		case _T3LOGO_STATE_FADE_OUTLINE:
+		{
+			app->logo_fade += app->logo_vfade;
+			if(app->logo_fade >= 1.0)
+			{
+				app->logo_overlay_fade = 0.75;
+				app->logo_fade = 1.0;
+				app->state = _T3LOGO_STATE_FADE_FLASH;
+			}
+			break;
+		}
+		case _T3LOGO_STATE_FADE_FLASH:
+		{
+			app->logo_overlay_fade -= app->logo_vfade;
+			if(app->logo_overlay_fade <= 0.0)
+			{
+				app->logo_overlay_fade = 0.0;
+				app->state = _T3LOGO_STATE_DONE;
+				t3f_clear_keys();
+			}
+			break;
+		}
+		case _T3LOGO_STATE_DONE:
+		{
+			if(t3f_key[ALLEGRO_KEY_R])
+			{
+				app->state = _T3LOGO_STATE_FADE_IN;
+				t3f_key[ALLEGRO_KEY_R] = 0;
+			}
+			else if(t3f_key_pressed())
+			{
+				t3f_clear_keys();
+				app->state = _T3LOGO_STATE_FADE_OUT;
+			}
+			break;
+		}
+		case _T3LOGO_STATE_FADE_OUT:
+		{
+			app->fade += _T3LOGO_FADE_IN;
+			if(app->fade >= 1.0)
+			{
+				app->fade = 1.0;
+				t3f_exit();
+			}
+		}
+	}
 }
 
 static void render_logo(APP_INSTANCE * app, bool outline)
@@ -264,6 +344,8 @@ void app_render(void * data)
 	render_logo(app, true);
 	render_logo(app, false);
 	t3f_draw_scaled_bitmap(app->logo_bitmap, al_map_rgba_f(app->logo_fade, app->logo_fade, app->logo_fade, app->logo_fade), t3f_virtual_display_width / 2 - _T3LOGO_BITMAP_SIZE / 2, t3f_virtual_display_height / 2 - _T3LOGO_BITMAP_SIZE / 2 - 42 + _T3LOGO_Y_OFFSET, 0, _T3LOGO_BITMAP_SIZE, _T3LOGO_BITMAP_SIZE, 0);
+	t3f_draw_scaled_bitmap(app->logo_outline_bitmap, al_map_rgba_f(app->logo_overlay_fade, app->logo_overlay_fade, app->logo_overlay_fade, app->logo_overlay_fade), t3f_virtual_display_width / 2 - _T3LOGO_BITMAP_SIZE / 2, t3f_virtual_display_height / 2 - _T3LOGO_BITMAP_SIZE / 2 - 42 + _T3LOGO_Y_OFFSET, 0, _T3LOGO_BITMAP_SIZE, _T3LOGO_BITMAP_SIZE, 0);
+	al_draw_filled_rectangle(0, 0, t3f_virtual_display_width, t3f_virtual_display_height, al_map_rgba_f(0.0, 0.0, 0.0, app->fade));
 }
 
 /* initialize our app, load graphics, etc. */
@@ -285,6 +367,21 @@ bool app_initialize(APP_INSTANCE * app, int argc, char * argv[])
 
 	app->logo_bitmap = al_load_bitmap("data/logo.png");
 	if(!app->logo_bitmap)
+	{
+		return false;
+	}
+	app->logo_outline_bitmap = al_load_bitmap("data/logo_outline.png");
+	if(!app->logo_outline_bitmap)
+	{
+		return false;
+	}
+	app->logo_bump_sound = al_load_sample("data/movefail.wav");
+	if(!app->logo_bump_sound)
+	{
+		return false;
+	}
+	app->logo_click_sound = al_load_sample("data/ncd.wav");
+	if(!app->logo_click_sound)
 	{
 		return false;
 	}
@@ -335,7 +432,10 @@ bool app_initialize(APP_INSTANCE * app, int argc, char * argv[])
 	app->logo_side_zsort[0] = &app->logo_side[0];
 	app->logo_side_zsort[1] = &app->logo_side[1];
 	app->logo_side_zsort[2] = &app->logo_side[2];
+	update_logo(app);
 
+	app->state = _T3LOGO_STATE_FADE_IN;
+	app->fade = 1.0;
 	app->tick = -1000;
 
 	return true;
