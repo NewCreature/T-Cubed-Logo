@@ -1,7 +1,13 @@
 T Cubed Logo Issues
 -------------------
 
-[ ]Create animation that rotates the shape 9/8 turns and tilts to 0.5.
+[ ]Finalize animation.
+
+   [ ]Add 'punch' sound.
+
+   [ ]Add 'click into place' sound.
+
+   [ ]Fade in outline and logo text when logo clicks into place.
 
 [ ]Modularize logo into a single .c/.h combo so it can be imported into other
    projects.
